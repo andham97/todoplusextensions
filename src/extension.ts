@@ -21,8 +21,6 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		let lines = vscode.window.activeTextEditor?.document.getText().split("\n");
 
-		const replaces = [];
-
 		const getDate = (date: string) => new Date("20" + date);
 
 		const getLines = (date?: Date) => {
@@ -37,8 +35,6 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		}
 
-		const items = lines?.filter(line => line.indexOf('@started') > -1 && line.indexOf('@exclude') == -1);
-
 		vscode.window.activeTextEditor?.edit(edit => {
 			lines?.forEach((ov, i) => {
 				if (ov.toLowerCase().indexOf('@overview') == -1) {
@@ -47,13 +43,12 @@ export function activate(context: vscode.ExtensionContext) {
 				if (ov.indexOf('@overview(') > -1) {
 					const timeStamp = getDate(ov.split('@overview(')[1].split(')')[0]);
 					edit.delete(new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, ov.length)));
-					const l = getLines(timeStamp);
+					const l = getLines(timeStamp).map(line => `${line}${line.substr(-1) == " " ? "" : " "}@exclude`);
 					edit.insert(new vscode.Position(i, 0), l.join('\n'));
 				}
 				else {
-					
 					edit.delete(new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, ov.length)));
-					const l = getLines();
+					const l = getLines().map(line => `${line}${line.substr(-1) == " " ? "" : " "}@exclude`);
 					edit.insert(new vscode.Position(i, 0), l.join('\n'));
 				}
 			});
@@ -63,20 +58,21 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(disposable);
 	context.subscriptions.push(vscode.commands.registerCommand('todoplusextensions.excludeItem', () => {
 		if (vscode.window.activeTextEditor) {
-			const position = vscode.window.activeTextEditor.selection.active;
-
-			let line = vscode.window.activeTextEditor.document.getText().split('\n')[position.line];
-			vscode.window.showInformationMessage(line);
-			const len = line.length;
-			vscode.window.activeTextEditor?.edit(edit => {
-				if (line.indexOf(' @exclude') > -1) {
-					line = line.replace(' @exclude', '');
+			const positions = vscode.window.activeTextEditor.selection;
+			const lines = vscode.window.activeTextEditor.document.getText().split('\n');
+			vscode.window.activeTextEditor.edit(edit => {
+				for (let i = positions.start.line; i <= positions.end.line; i++) {
+					let line = lines[i];
+					const text = ' @exclude';
+					if (line.indexOf(text) > -1) {
+						const pos = line.indexOf(text);
+						edit.delete(new vscode.Range(new vscode.Position(i, pos), new vscode.Position(i, pos + text.length)));
+					}
+					else {
+						line += ' @exclude';
+						edit.insert(new vscode.Position(i, line.length), `${line.substr(-1) == " " ? "" : " "}@exclude`);
+					}
 				}
-				else {
-					line += ' @exclude';
-				}
-				edit.delete(new vscode.Range(new vscode.Position(position.line, 0), new vscode.Position(position.line, len)));
-				edit.insert(new vscode.Position(position.line, 0), line);
 			});
 		}
 	}));
@@ -119,7 +115,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 					vscode.window.activeTextEditor.edit(edit => {
 						const year = date.year().toString().substring(2);
-						let month = date.month().toString();
+						let month = (Number(date.month()) + 1).toString();
 						let day = date.date().toString();
 						let hour = date.hour().toString();
 						let minute = date.minute().toString();
@@ -147,7 +143,6 @@ export function activate(context: vscode.ExtensionContext) {
 			const position = vscode.window.activeTextEditor.selection.active;
 
 			const line = vscode.window.activeTextEditor.document.getText().split('\n')[position.line];
-			vscode.window.showInformationMessage(line);
 			const date = moment();
 			const year = date.year().toString().substring(2);
 			let month = date.month().toString();
@@ -167,7 +162,7 @@ export function activate(context: vscode.ExtensionContext) {
 				minute = '0' + minute;
 			}
 			vscode.window.activeTextEditor.edit(edit => {
-				edit.insert(new vscode.Position(position.line, line.length), ` @time(${year}-${month}-${day} ${hour}:${minute})`);
+				edit.insert(new vscode.Position(position.line, line.length), `${line.substr(-1) == " " ? "" : " "}@time(${year}-${month}-${day} ${hour}:${minute})`);
 			});
 		}
 	}));

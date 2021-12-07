@@ -8,6 +8,11 @@ Allows use of `@overview` tags to generate (Alt+G) a collection of items both st
 
 ## Release Notes
 
+### 1.2.0
+- Added ability to toggle exclude on multiple lines at once
+- Fixed issue with generate overview where month were one behind selected month
+- Fixed minor spacing issue where 2 whitespaces could end up before tag was inserted for time and exclude tags
+
 ### 1.1.0
 - Added `@time` tag (Alt+t) to tag comments etc. with current timestamp
 
