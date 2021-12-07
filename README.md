@@ -8,6 +8,9 @@ Allows use of `@overview` tags to generate (Alt+G) a collection of items both st
 
 ## Release Notes
 
+### 1.1.0
+- Added `@time` tag (Alt+t) to tag comments etc. with current timestamp
+
 ### 1.0.0
 
 Initial release of TodoPlusExtensions

@@ -141,6 +141,36 @@ export function activate(context: vscode.ExtensionContext) {
 			}, () => {});
 		}
 	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('todoplusextensions.tagTime', () => {
+		if (vscode.window.activeTextEditor) {
+			const position = vscode.window.activeTextEditor.selection.active;
+
+			const line = vscode.window.activeTextEditor.document.getText().split('\n')[position.line];
+			vscode.window.showInformationMessage(line);
+			const date = moment();
+			const year = date.year().toString().substring(2);
+			let month = date.month().toString();
+			let day = date.date().toString();
+			let hour = date.hour().toString();
+			let minute = date.minute().toString();
+			if (month.length == 1) {
+				month = '0' + month;
+			}
+			if (day.length == 1) {
+				day = '0' + day;
+			}
+			if (hour.length == 1) {
+				hour = '0' + hour;
+			}
+			if (minute.length == 1) {
+				minute = '0' + minute;
+			}
+			vscode.window.activeTextEditor.edit(edit => {
+				edit.insert(new vscode.Position(position.line, line.length), ` @time(${year}-${month}-${day} ${hour}:${minute})`);
+			});
+		}
+	}));
 }
 
 // this method is called when your extension is deactivated

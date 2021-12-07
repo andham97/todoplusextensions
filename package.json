@@ -2,7 +2,7 @@
 	"name": "todoplusextensions",
 	"displayName": "TodoPlusExtensions",
 	"description": "Adds some extensions to Todo+ functionality",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"license": "MIT",
 	"repository": {
 		"url": "https://github.com/andham97/todoplusextensions"
@@ -19,7 +19,8 @@
 	"activationEvents": [
 		"onCommand:todoplusextensions.generateOverviews",
 		"onCommand:todoplusextensions.excludeItem",
-		"onCommand:todoplusextensions.newOverview"
+		"onCommand:todoplusextensions.newOverview",
+		"onCommand:todoplusextensions.tagTime"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
@@ -35,6 +36,10 @@
 			{
 				"command": "todoplusextensions.newOverview",
 				"title": "New Overview"
+			},
+			{
+				"command": "todoplusextensions.tagTime",
+				"title": "Tag Time"
 			}
 		],
 		"keybindings": [
@@ -51,6 +56,11 @@
 			{
 				"command": "todoplusextensions.newOverview",
 				"key": "Alt+o",
+				"when": "editorTextFocus && editorLangId == todo"
+			},
+			{
+				"command": "todoplusextensions.tagTime",
+				"key": "Alt+t",
 				"when": "editorTextFocus && editorLangId == todo"
 			}
 		]
