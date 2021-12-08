@@ -2,7 +2,7 @@
 	"name": "todoplusextensions",
 	"displayName": "TodoPlusExtensions",
 	"description": "Adds some extensions to Todo+ functionality",
-	"version": "1.4.0",
+	"version": "1.5.0",
 	"license": "MIT",
 	"repository": {
 		"url": "https://github.com/andham97/todoplusextensions"
@@ -81,6 +81,11 @@
 					"type": "boolean",
 					"default": false,
 					"description": "Re-arrange root level projects when sorting. This will group projects with all done tasks in the bottom and those not done in the top."
+				},
+				"todoplusextensions.useArchivingOnSort": {
+					"type": "boolean",
+					"default": true,
+					"description": "Use archive sorting. Making done/cancelled tasks to be added to a Archive project retaining the project structure from above to keep the context."
 				}
 			}
 		}

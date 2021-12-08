@@ -180,6 +180,7 @@ export function activate(context: vscode.ExtensionContext) {
 			const config = vscode.workspace.getConfiguration('todoplusextensions');
 			const onlyRootSpacing = config.get<boolean>('onlyRootProjectSeparationOnSort');
 			const reArrangeRootProjects = config.get<boolean>('reArrangeRootProjects');
+			const useArchivingSort = config.get<boolean>('useArchivingOnSort');
 			const lines = vscode.window.activeTextEditor.document.getText().split('\n');
 			const items = [];
 			const addToStruct = (struct: TodoItem[], data: TodoItem, depth: number) => {
@@ -265,6 +266,65 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				});
 			}
+
+			const pushChildrenTexts = (struct: TodoItem[]) => {
+				struct.forEach(child => {
+					child.text = "  " + child.text;
+					pushChildrenTexts(child.children);
+				});
+			}
+
+			const populateArchive = (struct: TodoItem[], archive: TodoItem) => {
+				struct.filter(item => item.text.toLowerCase().trim() != 'archive:').forEach(item => {
+					let child = archive.children.find(child => child.text.toLowerCase().trim() == item.text.toLowerCase().trim());
+					let isNew = false;
+					if (!child) {
+						isNew = true;
+						child = JSON.parse(JSON.stringify(item)) as TodoItem;
+						child.text = "  " + child.text;
+					}
+					if (item.done) {
+						pushChildrenTexts(child.children);
+						archive.children.push(child);
+						return;
+					}
+					child.children = [];
+					populateArchive(item.children, child);
+					if (child.children.length > 0 && isNew) {
+						archive.children.push(child);
+					}
+				});
+			}
+
+			const removeDoneItems = (struct: TodoItem[]) => {
+				const removeIndexes: number[] = [];
+				struct.forEach((item, i) => {
+					if (item.done && item.type != 'project') {
+						removeIndexes.push(i);
+					}
+					else if (item.text.toLowerCase().trim() != 'archive:') {
+						removeDoneItems(item.children);
+					}
+				});
+				removeIndexes.forEach((ind, i) => {
+					struct.splice(ind - i, 1);
+				});
+			}
+			
+			if (useArchivingSort) {
+				let archive = projects.find(item => item.text.toLowerCase().trim() == 'archive:');
+				let isNew = false;
+				if (!archive) {
+					isNew = true;
+					archive = { text: 'Archive:', type: 'project', done: true, tags: [], children: [] } as TodoItem;
+				}
+				populateArchive(projects, archive);
+				removeDoneItems(projects);
+				if (isNew) {
+					projects.push(archive);
+				}
+			}
+
 			const generate = (struct: TodoItem[], isRoot: boolean) => {
 				return struct.reduce((acc, obj, index) => {
 					if (obj.type == 'project' && isRoot && index > 0) {

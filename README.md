@@ -10,6 +10,13 @@ Supports sorting of entire todo list with started tasks being placed on-top, non
 
 ## Release Notes
 
+### 1.5.0
+- Added archive on sorting where all done/cancelled tasks are moved into an archive project in the bottom.
+  - Project structure is persisted within archive and outside
+- Known issue: Archiving ignores @exclude tags, so be careful when using archive sorting.
+- Known issue: Sorting in lists where @overview tags has been used (it exist multiple of the same completed tasks will result in multiple entries in the archive).
+- Known issue: @overview generation does not respect project structure so might have side effects where tasks look like their children of some tasks, when in-fact they're children of a sub-project whos context is not respected of overviews.
+
 ### 1.4.0
 - Added setting to avoid re-arranging root level projects
 - Changed default value on project spacing on sort setting
