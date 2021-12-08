@@ -2,7 +2,7 @@
 	"name": "todoplusextensions",
 	"displayName": "TodoPlusExtensions",
 	"description": "Adds some extensions to Todo+ functionality",
-	"version": "1.3.0",
+	"version": "1.4.0",
 	"license": "MIT",
 	"repository": {
 		"url": "https://github.com/andham97/todoplusextensions"
@@ -74,8 +74,13 @@
 			"properties": {
 				"todoplusextensions.onlyRootProjectSeparationOnSort": {
 					"type": "boolean",
-					"default": true,
+					"default": false,
 					"description": "Add only blank line above root projects on sort"
+				},
+				"todoplusextensions.reArrangeRootProjects": {
+					"type": "boolean",
+					"default": false,
+					"description": "Re-arrange root level projects when sorting. This will group projects with all done tasks in the bottom and those not done in the top."
 				}
 			}
 		}

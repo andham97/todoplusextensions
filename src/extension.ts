@@ -179,6 +179,7 @@ export function activate(context: vscode.ExtensionContext) {
 		if (vscode.window.activeTextEditor) {
 			const config = vscode.workspace.getConfiguration('todoplusextensions');
 			const onlyRootSpacing = config.get<boolean>('onlyRootProjectSeparationOnSort');
+			const reArrangeRootProjects = config.get<boolean>('reArrangeRootProjects');
 			const lines = vscode.window.activeTextEditor.document.getText().split('\n');
 			const items = [];
 			const addToStruct = (struct: TodoItem[], data: TodoItem, depth: number) => {
@@ -189,8 +190,7 @@ export function activate(context: vscode.ExtensionContext) {
 					addToStruct(struct[struct.length - 1].children, data, depth - 1);
 				}
 			};
-			const tagRegex = /(@[^\(\s]+)/g;
-			const projs = lines.reduce((struct, line) => {
+			const projects = lines.reduce((struct, line) => {
 				if (line.trim() == '') {
 					return struct;
 				}
@@ -202,16 +202,19 @@ export function activate(context: vscode.ExtensionContext) {
 					tags: [...line.matchAll(/(@[^\(\s]+)/g)].map(v => v[0].toLowerCase()),
 					children: [],
 				};
-				if (line.indexOf('☐') > -1) {
+				if (line.trim().indexOf('☐') == 0) {
 					data.type = 'open';
 				}
-				else if (line.indexOf('✔') > -1) {
+				else if (line.trim().indexOf('✔') == 0) {
 					data.type = 'done';
 				}
-				else if (line.indexOf('✘') > -1) {
+				else if (line.trim().indexOf('✘') == 0) {
 					data.type = 'cancel';
 				}
-				else if (line.indexOf(':') > -1) {
+				else if (line.trim().indexOf('*') == 0) {
+					data.type = 'bp';
+				}
+				else if (line.trim().indexOf(':') > -1) {
 					data.type = 'project';
 				}
 				addToStruct(struct, data, depth);
@@ -221,7 +224,7 @@ export function activate(context: vscode.ExtensionContext) {
 			const checkStruct = (struct: TodoItem[]) => {
 				struct.forEach(obj => {
 					if (obj.children.length == 0) {
-						if (obj.type == 'project') {
+						if (obj.type == 'project' || obj.type == 'bp') {
 							obj.done = true;
 						}
 						else {
@@ -230,7 +233,7 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 					else {
 						checkStruct(obj.children);
-						if (obj.type == 'project') {
+						if (obj.type == 'project' || obj.type == 'bp') {
 							obj.done = obj.children.filter(c => !c.done).length == 0;
 						}
 						else {
@@ -239,7 +242,7 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				});
 			}
-			checkStruct(projs);
+			checkStruct(projects);
 
 			const sortStruct = (struct: TodoItem[]) => {
 				struct.forEach(obj => {
@@ -247,15 +250,24 @@ export function activate(context: vscode.ExtensionContext) {
 						sortStruct(obj.children);
 					}
 				});
-				struct.sort((a, b) => a.done && !b.done ? 1 : (!a.done && b.done ? -1 : 0));
 				struct.sort((a, b) => a.tags.findIndex(v => v == '@started') == -1 && b.tags.findIndex(v => v == '@started') > -1 ? 1 : (a.tags.findIndex(v => v == '@started') > -1 && b.tags.findIndex(v => v == '@started') == -1 ? -1 : 0));
+				struct.sort((a, b) => a.done && !b.done ? 1 : (!a.done && b.done ? -1 : 0));
+				struct.sort((a, b) => a.type == 'bp' && b.type != 'bp' ? -1 : (a.type != 'bp' && b.type == 'bp' ? 1 : 0));
 			}
 
-			sortStruct(projs);
-
+			if (reArrangeRootProjects) {
+				sortStruct(projects);
+			}
+			else {
+				projects.forEach(proj => {
+					if (proj.children.length > 0) {
+						sortStruct(proj.children);
+					}
+				});
+			}
 			const generate = (struct: TodoItem[], isRoot: boolean) => {
-				return struct.reduce((acc, obj) => {
-					if (obj.type == 'project' && isRoot) {
+				return struct.reduce((acc, obj, index) => {
+					if (obj.type == 'project' && isRoot && index > 0) {
 						acc += '\n';
 					}
 					acc += obj.text + '\n';
@@ -266,7 +278,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 			vscode.window.activeTextEditor.edit(edit => {
 				edit.delete(new vscode.Range(new vscode.Position(0, 0), new vscode.Position(lines.length - 1, lines[lines.length - 1].length)));
-				edit.insert(new vscode.Position(0, 0), generate(projs, true));
+				edit.insert(new vscode.Position(0, 0), generate(projects, true));
 			});
 		}
 	}));
