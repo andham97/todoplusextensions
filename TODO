@@ -1,0 +1,54 @@
+Containerized:
+  EnOS:
+    ✔ Get multiple namespaces in EnOS cluster to test multi-customer deplyment @started(21-12-02 10:00) @done(21-12-09 10:31) @lasted(1w31m14s) @exclude
+      * `Sent mail` @time(21-11-07 07:47)
+      * `On its way, Hu Nan will send email when token's ready` @time(21-11-09 09:54)
+    ☐ Get outside VPN Access to portal (and other services in EnOS cluster) @started(21-12-02 10:00) @exclude
+      * `I will follow up with Hu Nan` @time(21-11-09 09:55)
+    ☐ Check Linux node availability in EnOS cluster @started(21-12-07 07:20) @exclude
+      * `Sent mail to Hu Nan` @time(21-11-07 07:47)
+      * `Linux nodes ready, Hu Nan will send email with scheduling info` @time(21-11-09 09:55)
+    ☐ Check status on 50 request limit. (Start checking when new monitoring suite is online)
+      * `Suite online as of` @time(21-11-09 09:44)
+      * `Will schedule meeting with Hu Nan regarding testing this` @time(21-11-09 09:56)
+
+  Bazefield:
+    ☐ Containerize Connection Monitor in linux container @started(21-12-07 13:25)
+    ☐ Test Connection Monitor service on test-master
+    ☐ Test linux node without taints and tolerations
+
+Map:
+  ☐ SiteOperationThreshold setting incorporation with asset operations
+  ✔ ObjectType GET request count @started(21-12-09 10:45) @done(21-12-09 13:48) @lasted(3h3m37s)
+  ✔ Map connection state tags for OX2 (https://bazefield.freshdesk.com/helpdesk/tickets/50717) @started(21-12-09 14:00) @done(21-12-09 14:22) @lasted(22m12s)
+
+Excel Add-in:
+  ☐ Check AD login not appearing for SSE @started(21-12-08 08:22)
+    * `Might be Azure AD not setup correctly Anders checking` @time(21-11-09 14:24)
+  ☐ Sign MSI on creation to avoid antivirus blocking
+  ✔ Get-FileHash screenshot for Gasco (https://bazefield.freshdesk.com/helpdesk/tickets/50516) @done(21-12-09 13:51)
+
+
+Other:
+  ☐ Add ApiKeyProvider (Bazefield.Common?) og IApiKeyProvider (Baze.Common)
+
+Archive:
+  Containerized:
+    Bazefield:
+      ✔ Get linux node for our cluster @started(21-12-06 14:56) @done(21-12-08 09:26) @lasted(1d18h30m30s)
+
+  Map:
+    ✔ Portfolio map in empty for SSE @started(21-12-07 07:19) @done(21-12-07 08:00) @lasted(41m)
+      * `Map setting had center on load long/lat outside normal bounds. Markers not replicated on "other worlds"`
+
+  Excel Add-in:
+    ✔ Rewrite excel addin to re-add support for regular AD users @started(21-12-06 08:30) @done(21-12-06 13:08) @lasted(4h38m31s)
+    ✔ Check config file settings for excel-addin for potential Gasco solution @started(21-12-06 07:40) @done(21-12-06 07:48) @lasted(8m)
+      * `Might be entering a dummy password can work around v2.2.0`
+
+  Other:
+    ✔ Unassign roles user don't exist error on creating and changing user role with e-mail username @started(21-12-08 10:27) @done(21-12-08 13:39) @lasted(3h12m46s)
+      * `It assumes anything with @ is email so searches on email field Bazefield.Portal.DataModel/UserModel.cs:GetUserAuthByUserName line(42)`
+      * `Might be issue with incomplete user created, but meta string is null and and not set to empty dictionary as done when creating user (might need this here to ensure it works) Bazefield.Portal.DataModel/UserModel.cs:GetUserAuth line(84)`
+    ✔ Watchdog .NET 4 @done(21-12-03 11:00)
+    ✔ Data export API call, deadband NaN values (in 9.5) @done(21-12-03 10:00)

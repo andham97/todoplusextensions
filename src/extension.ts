@@ -9,6 +9,88 @@ interface TodoItem {
 	done: boolean;
 	tags: string[];
 	children: TodoItem[];
+	comments: string[];
+}
+
+const parseDocument = (lines: string[]): TodoItem[] => {
+	let addToStruct = (struct: TodoItem[], data: TodoItem, depth: number) => {
+		if (depth == 0) {
+			struct.push(data);
+		}
+		else if (struct[struct.length - 1].children.length == 0 && data.type == 'bp') {
+			struct[struct.length - 1].comments.push(data.text);
+		} 
+		else {
+			addToStruct(struct[struct.length - 1].children, data, depth - 1);
+		}
+	};
+	let projects = lines.reduce((struct, line) => {
+		if (line.trim() == '') {
+			return struct;
+		}
+		const depth = line.split('  ').findIndex(c => c != '');
+		const data: TodoItem = {
+			text: line,
+			type: '',
+			done: false,
+			tags: [...line.matchAll(/(@[^\(\s]+)/g)].map(v => v[0].toLowerCase()),
+			children: [],
+			comments: [],
+		};
+		if (line.trim().indexOf('☐') == 0) {
+			data.type = 'open';
+		}
+		else if (line.trim().indexOf('✔') == 0) {
+			data.type = 'done';
+		}
+		else if (line.trim().indexOf('✘') == 0) {
+			data.type = 'cancel';
+		}
+		else if (line.trim().indexOf('*') == 0) {
+			data.type = 'bp';
+		}
+		else if (line.trim().indexOf(':') > -1) {
+			data.type = 'project';
+		}
+		addToStruct(struct, data, depth);
+		return struct;
+	}, [] as TodoItem[]);
+
+	let checkStruct = (struct: TodoItem[]) => {
+		struct.forEach(obj => {
+			if (obj.children.length == 0) {
+				if (obj.type == 'project' || obj.type == 'bp') {
+					obj.done = true;
+				}
+				else {
+					obj.done = (obj.type == 'done' || obj.type == 'cancel');
+				}
+			}
+			else {
+				checkStruct(obj.children);
+				if (obj.type == 'project' || obj.type == 'bp') {
+					obj.done = obj.children.filter(c => !c.done).length == 0;
+				}
+				else {
+					obj.done = (obj.type == 'done' || obj.type == 'cancel') && obj.children.filter(c => !c.done).length == 0;
+				}
+			}
+		});
+	}
+	checkStruct(projects);
+	return projects;
+}
+
+const generateDocument = (struct: TodoItem[]) => {
+	return struct.reduce((acc, obj, index) => {
+		if (obj.type == 'project' && index > 0) {
+			acc += '\n';
+		}
+		acc += obj.text + '\n';
+		acc += obj.comments.join('\n') + (obj.comments.length > 0 ? '\n' : '');
+		acc += generateDocument(obj.children);
+		return acc;
+	}, '');
 }
 
 // this method is called when your extension is activated
@@ -21,9 +103,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('todoplusextensions.generateOverviews', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
+	context.subscriptions.push(vscode.commands.registerCommand('todoplusextensions.generateOverviews', () => {
 		if (!vscode.window.activeTextEditor) {
 			return;
 		}
@@ -61,9 +141,8 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 			});
 		});
-	});
+	}));
 
-	context.subscriptions.push(disposable);
 	context.subscriptions.push(vscode.commands.registerCommand('todoplusextensions.excludeItem', () => {
 		if (vscode.window.activeTextEditor) {
 			const positions = vscode.window.activeTextEditor.selection;
@@ -103,10 +182,8 @@ export function activate(context: vscode.ExtensionContext) {
 					});
 				}
 				else if (warp && vscode.window.activeTextEditor) {
-					vscode.window.showInformationMessage(warp);
 					let date = moment();
 					warp = warp.trim();
-					vscode.window.showInformationMessage(warp);
 					if (warp.indexOf('d') > -1) {
 						date = date.subtract(Number(warp.replace('d', '')), 'days');
 					}
@@ -119,7 +196,6 @@ export function activate(context: vscode.ExtensionContext) {
 					else if (warp.indexOf('h') > -1) {
 						date = date.subtract(Number(warp.replace('h', '')), 'hours');
 					}
-					vscode.window.showInformationMessage(date.toString());
 
 					vscode.window.activeTextEditor.edit(edit => {
 						const year = date.year().toString().substring(2);
@@ -149,7 +225,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('todoplusextensions.tagTime', () => {
 		if (vscode.window.activeTextEditor) {
 			const position = vscode.window.activeTextEditor.selection.active;
-
+			
 			const line = vscode.window.activeTextEditor.document.getText().split('\n')[position.line];
 			const date = moment();
 			const year = date.year().toString().substring(2);
@@ -177,73 +253,13 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.commands.registerCommand('todoplusextensions.sort', () => {
 		if (vscode.window.activeTextEditor) {
+			const startPosition = vscode.window.activeTextEditor.selection.active;
 			const config = vscode.workspace.getConfiguration('todoplusextensions');
-			const onlyRootSpacing = config.get<boolean>('onlyRootProjectSeparationOnSort');
 			const reArrangeRootProjects = config.get<boolean>('reArrangeRootProjects');
 			const useArchivingSort = config.get<boolean>('useArchivingOnSort');
 			const lines = vscode.window.activeTextEditor.document.getText().split('\n');
-			const items = [];
-			const addToStruct = (struct: TodoItem[], data: TodoItem, depth: number) => {
-				if (depth == 0) {
-					struct.push(data);
-				}
-				else {
-					addToStruct(struct[struct.length - 1].children, data, depth - 1);
-				}
-			};
-			const projects = lines.reduce((struct, line) => {
-				if (line.trim() == '') {
-					return struct;
-				}
-				const depth = line.split('  ').findIndex(c => c != '');
-				const data: TodoItem = {
-					text: line,
-					type: '',
-					done: false,
-					tags: [...line.matchAll(/(@[^\(\s]+)/g)].map(v => v[0].toLowerCase()),
-					children: [],
-				};
-				if (line.trim().indexOf('☐') == 0) {
-					data.type = 'open';
-				}
-				else if (line.trim().indexOf('✔') == 0) {
-					data.type = 'done';
-				}
-				else if (line.trim().indexOf('✘') == 0) {
-					data.type = 'cancel';
-				}
-				else if (line.trim().indexOf('*') == 0) {
-					data.type = 'bp';
-				}
-				else if (line.trim().indexOf(':') > -1) {
-					data.type = 'project';
-				}
-				addToStruct(struct, data, depth);
-				return struct;
-			}, [] as TodoItem[]);
-
-			const checkStruct = (struct: TodoItem[]) => {
-				struct.forEach(obj => {
-					if (obj.children.length == 0) {
-						if (obj.type == 'project' || obj.type == 'bp') {
-							obj.done = true;
-						}
-						else {
-							obj.done = (obj.type == 'done' || obj.type == 'cancel');
-						}
-					}
-					else {
-						checkStruct(obj.children);
-						if (obj.type == 'project' || obj.type == 'bp') {
-							obj.done = obj.children.filter(c => !c.done).length == 0;
-						}
-						else {
-							obj.done = (obj.type == 'done' || obj.type == 'cancel') && obj.children.filter(c => !c.done).length == 0;
-						}
-					}
-				});
-			}
-			checkStruct(projects);
+			const startLine = lines[startPosition.line];
+			let projects = parseDocument(lines);
 
 			const sortStruct = (struct: TodoItem[]) => {
 				struct.forEach(obj => {
@@ -270,28 +286,31 @@ export function activate(context: vscode.ExtensionContext) {
 			const pushChildrenTexts = (struct: TodoItem[]) => {
 				struct.forEach(child => {
 					child.text = "  " + child.text;
+					child.comments = child.comments.map(comment => "  " + comment);
 					pushChildrenTexts(child.children);
 				});
 			}
 
 			const populateArchive = (struct: TodoItem[], archive: TodoItem) => {
 				struct.filter(item => item.text.toLowerCase().trim() != 'archive:').forEach(item => {
-					let child = archive.children.find(child => child.text.toLowerCase().trim() == item.text.toLowerCase().trim());
+					let archiveChild = archive.children.find(child => child.text.toLowerCase().trim() == item.text.toLowerCase().trim());
 					let isNew = false;
-					if (!child) {
+					if (!archiveChild) {
 						isNew = true;
-						child = JSON.parse(JSON.stringify(item)) as TodoItem;
-						child.text = "  " + child.text;
+						archiveChild = JSON.parse(JSON.stringify(item)) as TodoItem;
+						archiveChild.text = "  " + archiveChild.text;
 					}
 					if (item.done) {
-						pushChildrenTexts(child.children);
-						archive.children.push(child);
+						pushChildrenTexts(archiveChild.children);
+						archive.children.push(archiveChild);
 						return;
 					}
-					child.children = [];
-					populateArchive(item.children, child);
-					if (child.children.length > 0 && isNew) {
-						archive.children.push(child);
+					else if (isNew) {
+						archiveChild.children = [];
+					}
+					populateArchive(item.children, archiveChild);
+					if (archiveChild.children.length > 0 && isNew) {
+						archive.children.push(archiveChild);
 					}
 				});
 			}
@@ -316,7 +335,7 @@ export function activate(context: vscode.ExtensionContext) {
 				let isNew = false;
 				if (!archive) {
 					isNew = true;
-					archive = { text: 'Archive:', type: 'project', done: true, tags: [], children: [] } as TodoItem;
+					archive = { text: 'Archive:', type: 'project', done: true, tags: [], children: [], comments: [] } as TodoItem;
 				}
 				populateArchive(projects, archive);
 				removeDoneItems(projects);
@@ -324,22 +343,13 @@ export function activate(context: vscode.ExtensionContext) {
 					projects.push(archive);
 				}
 			}
-
-			const generate = (struct: TodoItem[], isRoot: boolean) => {
-				return struct.reduce((acc, obj, index) => {
-					if (obj.type == 'project' && isRoot && index > 0) {
-						acc += '\n';
-					}
-					acc += obj.text + '\n';
-					acc += generate(obj.children, !onlyRootSpacing);
-					return acc;
-				}, '');
-			}
-
+			const newDocument = generateDocument(projects);
 			vscode.window.activeTextEditor.edit(edit => {
 				edit.delete(new vscode.Range(new vscode.Position(0, 0), new vscode.Position(lines.length - 1, lines[lines.length - 1].length)));
-				edit.insert(new vscode.Position(0, 0), generate(projects, true));
+				edit.insert(new vscode.Position(0, 0), newDocument);
 			});
+			const startIndex = newDocument.split('\n').findIndex(line => line.trim() == startLine.trim());
+			vscode.window.activeTextEditor.selection = new vscode.Selection(startIndex, startPosition.character, startIndex, startPosition.character);
 		}
 	}));
 }
